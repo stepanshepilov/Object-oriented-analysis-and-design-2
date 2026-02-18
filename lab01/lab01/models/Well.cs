@@ -1,35 +1,57 @@
+using System.Text.Json.Serialization;
 namespace lab01.Models;
 
-public class Well
+[JsonDerivedType(typeof(ProductionWell), "prod")]
+[JsonDerivedType(typeof(InjectionWell), "inj")]
+
+public abstract class BaseWell
 {
     public Guid Id { get; set; }
     public double X { get; set; }
     public double Y { get; set; }
     public double Z { get; set; }
     public double Pressure { get; set; }
-    public double Temperature { get; set; }
-    public string RockType { get; set; } = string.Empty;
-    public bool IsActive { get; set; }
-    public DateTime CreatedAt { get; set; }
     public string FieldName { get; set; } = string.Empty;
-    public double FlowRate { get; set; }
+    public DateTime CreatedAt { get; set; }
 
-    public Well() { }
+    public BaseWell() { }
 
-    public Well(double x, double y, double z, double pressure, double temperature, 
-                string rockType, bool isActive, DateTime createdAt, 
-                string fieldName, double flowRate)
+    public BaseWell(double x, double y, double z, double pressure, string fieldName)
     {
-        this.Id = Guid.NewGuid();
-        this.X = x;
-        this.Y = y;
-        this.Z = z;
-        this.Pressure = pressure;
-        this.Temperature = temperature;
-        this.RockType = rockType;
-        this.IsActive = isActive;
-        this.CreatedAt = createdAt;
-        this.FieldName = fieldName;
-        this.FlowRate = flowRate;
+        Id = Guid.NewGuid();
+        X = x; Y = y; Z = z;
+        Pressure = pressure;
+        FieldName = fieldName;
+        CreatedAt = DateTime.Now;
+    }
+}
+
+public class ProductionWell : BaseWell
+{
+    public double OilQuality { get; set; }
+    public double GasCut { get; set; }
+
+    public ProductionWell() { }
+    
+    public ProductionWell(double x, double y, double z, double pressure, string fieldName, double oilQuality, double gasCut) 
+        : base(x, y, z, pressure, fieldName)
+    {
+        OilQuality = oilQuality;
+        GasCut = gasCut;
+    }
+}
+
+public class InjectionWell : BaseWell
+{
+    public double InjectionRate { get; set; }
+    public string FluidType { get; set; } = "Water";
+
+    public InjectionWell() { }
+
+    public InjectionWell(double x, double y, double z, double pressure, string fieldName, double injectionRate, string fluidType) 
+        : base(x, y, z, pressure, fieldName)
+    {
+        InjectionRate = injectionRate;
+        FluidType = fluidType;
     }
 }

@@ -1,142 +1,209 @@
 import React, { useState, useEffect } from 'react';
-import { Drill, Save, PlusCircle, X } from 'lucide-react';
+import { Drill, Save, Plus, Sun, Moon, X, Map as MapIcon, Settings2 } from 'lucide-react';
 
 const API_URL = 'http://localhost:5000/api/wells';
 
 function App() {
   const [wells, setWells] = useState([]);
-  const [selectedWell, setSelectedWell] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [theme, setTheme] = useState('dark');
+  
+  const [formData, setFormData] = useState({
+    type: 'prod', x: '', y: '', z: '', 
+    pressure: '', fieldName: '',
+    oilQuality: '', gasCut: '',
+    injectionRate: '', fluidType: ''
+  });
 
-  const emptyWell = {
-    x: 0, y: 0, z: 0,
-    pressure: 0, temperature: 0,
-    rockType: 'Sandstone', isActive: true,
-    fieldName: '', flowRate: 0
+  const themes = {
+    dark: {
+      bg: '#1a0f0a',
+      card: 'rgba(43, 29, 22, 0.95)',
+      accent: '#ff8c00',
+      text: '#f5e6d3',
+      mapBg: '#241a14', // Темный шоколад
+      isoLine: '#3d2b1f', // Коричневые линии
+      grid: 'rgba(255, 140, 0, 0.05)',
+      glass: 'blur(12px)'
+    },
+    light: {
+      bg: '#dcd1b3', // Цвет старой бумаги
+      card: 'rgba(255, 255, 255, 0.9)',
+      accent: '#2b5a8c',
+      text: '#2c1e14',
+      mapBg: '#e8dfc5', // Светлый беж (как на референсе)
+      isoLine: '#b5a68d', // Оливково-коричневые линии
+      grid: 'rgba(0, 0, 0, 0.05)',
+      glass: 'blur(12px)'
+    }
   };
 
-  const [formData, setFormData] = useState(emptyWell);
+  const current = themes[theme];
 
   useEffect(() => { fetchWells(); }, []);
 
   const fetchWells = async () => {
-    const res = await fetch(API_URL);
-    const data = await res.json();
-    setWells(data);
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      setWells(data);
+    } catch (e) { console.error("API offline"); }
   };
 
   const handleMapClick = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = Math.round(e.clientX - rect.left);
     const y = Math.round(e.clientY - rect.top);
-    
-    setFormData({ ...emptyWell, x, y });
-    setSelectedWell(null);
+    setFormData({ type: 'prod', x, y, z: '', pressure: '', fieldName: '', oilQuality: '', gasCut: '', injectionRate: '', fluidType: '' });
     setIsFormOpen(true);
   };
 
   const saveWell = async () => {
-    const method = selectedWell ? 'PUT' : 'POST';
-    const url = selectedWell ? `${API_URL}/${selectedWell.id}` : API_URL;
-
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
-    });
-
+    const payload = { ...formData, x: +formData.x, y: +formData.y, z: +formData.z, pressure: +formData.pressure, oilQuality: +formData.oilQuality, gasCut: +formData.gasCut, injectionRate: +formData.injectionRate };
+    await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     setIsFormOpen(false);
     fetchWells();
   };
 
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <h1>Geology Map Pro <sup>v10.0</sup></h1>
-        <p>Manual Entry Mode (No Prototype Pattern)</p>
-      </header>
+    <div style={{...styles.container, backgroundColor: current.bg, color: current.text}}>
+      
+      {/* HEADER */}
+      <div style={{...styles.floatHeader, backgroundColor: current.card, backdropFilter: current.glass, border: `1px solid ${current.accent}33`}}>
+        <div style={{display:'flex', alignItems:'center', gap: '15px'}}>
+          <MapIcon color={current.accent} size={24} />
+          <h1 style={styles.title}>TOPOGRAPHIC <span style={{color: current.accent}}>CORE</span></h1>
+        </div>
+        <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} style={{...styles.themeBtn, backgroundColor: current.accent}}>
+          {theme === 'dark' ? <Sun size={18}/> : <Moon size={18}/>}
+        </button>
+      </div>
 
-      <div style={styles.main}>
-        <div style={styles.mapContainer} onClick={handleMapClick}>
-          <div style={styles.grid}></div>
+      <div style={styles.mapCenterer}>
+        <div style={{...styles.mapCanvas, backgroundColor: current.mapBg}} onClick={handleMapClick}>
+          
+          {/* ТОПОГРАФИЧЕСКИЙ ГЕНЕРАТОР (SVG FILTERS) */}
+          <svg width="100%" height="100%" style={styles.isolinesSvg}>
+            <filter id="topoNoise">
+              <feTurbulence type="fractalNoise" baseFrequency="0.006" numOctaves="5" seed="123" result="noise" />
+              <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 50 -25" result="iso" />
+            </filter>
+            
+            {/* Сетка (как на референсе) */}
+            <defs>
+              <pattern id="mapGrid" width="80" height="80" patternUnits="userSpaceOnUse">
+                <path d="M 80 0 L 0 0 0 80" fill="none" stroke={current.grid} strokeWidth="1" />
+              </pattern>
+            </defs>
+
+            {/* Слой с шумом (изолинии) */}
+            <rect width="100%" height="100%" filter="url(#topoNoise)" opacity="0.4" fill="none" stroke={current.isoLine} strokeWidth="1" />
+            
+            {/* Основная сетка поверх */}
+            <rect width="100%" height="100%" fill="url(#mapGrid)" />
+            
+            {/* Дополнительные "органические" линии вручную для густоты */}
+            <path d="M-100,200 Q300,50 600,400 T1200,200" fill="none" stroke={current.isoLine} strokeWidth="0.5" opacity="0.3" />
+            <path d="M200,-100 Q500,400 100,800" fill="none" stroke={current.isoLine} strokeWidth="0.5" opacity="0.3" />
+          </svg>
+
+          {/* WELL MARKERS */}
           {wells.map(well => (
-            <div 
-              key={well.id}
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedWell(well);
-                setFormData(well);
-                setIsFormOpen(true);
-              }}
-              style={{...styles.wellMarker, left: well.x, top: well.y}}
-            >
-              <Drill size={20} color={well.isActive ? "#00ffcc" : "#ff4444"} />
-              <span style={styles.wellLabel}>{well.fieldName || 'Well'}</span>
+            <div key={well.id} style={{...styles.wellMarker, left: well.x, top: well.y}} onClick={(e) => { e.stopPropagation(); setFormData(well); setIsFormOpen(true); }}>
+              <div style={{...styles.markerPoint, backgroundColor: current.accent}}>
+                <Drill size={14} color="#fff" />
+              </div>
+              <div style={{...styles.markerLabel, backgroundColor: current.card, border: `1px solid ${current.accent}44`}}>
+                {well.fieldName || 'Well'}
+              </div>
             </div>
           ))}
-          <div style={styles.hint}>Click anywhere to place a new well</div>
+
+          <div style={{...styles.mapHint, color: current.accent}}>+ КЛИК ДЛЯ УСТАНОВКИ СКВАЖИНЫ</div>
         </div>
-
-        {isFormOpen && (
-          <div style={styles.sidebar}>
-            <div style={styles.sidebarHeader}>
-              <h3>{selectedWell ? 'Edit Well' : 'New Well'}</h3>
-              <X onClick={() => setIsFormOpen(false)} cursor="pointer" />
-            </div>
-            
-            <div style={styles.form}>
-              <label>Field Name</label>
-              <input value={formData.fieldName} onChange={e => setFormData({...formData, fieldName: e.target.value})} />
-              
-              <div style={styles.row}>
-                <div><label>X</label><input type="number" value={formData.x} onChange={e => setFormData({...formData, x: +e.target.value})} /></div>
-                <div><label>Y</label><input type="number" value={formData.y} onChange={e => setFormData({...formData, y: +e.target.value})} /></div>
-              </div>
-
-              <label>Depth (Z)</label>
-              <input type="number" value={formData.z} onChange={e => setFormData({...formData, z: +e.target.value})} />
-
-              <label>Pressure (bar)</label>
-              <input type="number" value={formData.pressure} onChange={e => setFormData({...formData, pressure: +e.target.value})} />
-
-              <label>Temperature (°C)</label>
-              <input type="number" value={formData.temperature} onChange={e => setFormData({...formData, temperature: +e.target.value})} />
-
-              <label>Rock Type</label>
-              <select value={formData.rockType} onChange={e => setFormData({...formData, rockType: e.target.value})}>
-                <option>Sandstone</option>
-                <option>Basalt</option>
-                <option>Limestone</option>
-              </select>
-
-              <label>Flow Rate (m³/d)</label>
-              <input type="number" value={formData.flowRate} onChange={e => setFormData({...formData, flowRate: +e.target.value})} />
-
-              <button style={styles.saveBtn} onClick={saveWell}>
-                <Save size={16} /> Save Well Data
-              </button>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* PARAMETERS PANEL */}
+      {isFormOpen && (
+        <div style={{...styles.sidePanel, backgroundColor: current.card, backdropFilter: current.glass, color: current.text, border: `1px solid ${current.accent}44`}}>
+          <div style={styles.panelHeader}>
+            <div style={{display:'flex', alignItems:'center', gap: '10px'}}>
+              <Settings2 size={20} color={current.accent} />
+              <h2 style={{fontSize: '16px', margin:0, fontWeight: 800}}>WELL DATA</h2>
+            </div>
+            <X onClick={() => setIsFormOpen(false)} cursor="pointer" size={20} />
+          </div>
+
+          <div style={styles.scrollArea}>
+            <label style={styles.label}>PURPOSE</label>
+            <select style={{...styles.input, backgroundColor: current.input, color: current.text}} value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
+              <option value="prod">Production</option>
+              <option value="inj">Injection</option>
+            </select>
+
+            <label style={styles.label}>FIELD NAME</label>
+            <input placeholder="Name..." style={{...styles.input, backgroundColor: current.input, color: current.text}} value={formData.fieldName} onChange={e => setFormData({...formData, fieldName: e.target.value})} />
+
+            <div style={styles.row}>
+              <div style={{flex:1}}>
+                <label style={styles.label}>X</label>
+                <input style={{...styles.input, backgroundColor: current.input, color: current.text}} value={formData.x} readOnly />
+              </div>
+              <div style={{flex:1}}>
+                <label style={styles.label}>Y</label>
+                <input style={{...styles.input, backgroundColor: current.input, color: current.text}} value={formData.y} readOnly />
+              </div>
+            </div>
+
+            <label style={styles.label}>DEPTH (Z)</label>
+            <input style={{...styles.input, backgroundColor: current.input, color: current.text}} type="number" value={formData.z} onChange={e => setFormData({...formData, z: e.target.value})} />
+
+            {formData.type === 'prod' ? (
+              <div style={styles.typeSection}>
+                <label style={styles.label}>OIL QUALITY (API)</label>
+                <input style={{...styles.input, backgroundColor: current.input, color: current.text}} type="number" value={formData.oilQuality} onChange={e => setFormData({...formData, oilQuality: e.target.value})} />
+                <label style={styles.label}>GAS CUT (%)</label>
+                <input style={{...styles.input, backgroundColor: current.input, color: current.text}} type="number" value={formData.gasCut} onChange={e => setFormData({...formData, gasCut: e.target.value})} />
+              </div>
+            ) : (
+              <div style={styles.typeSection}>
+                <label style={styles.label}>INJECTION RATE</label>
+                <input style={{...styles.input, backgroundColor: current.input, color: current.text}} type="number" value={formData.injectionRate} onChange={e => setFormData({...formData, injectionRate: e.target.value})} />
+                <label style={styles.label}>AGENT TYPE</label>
+                <input style={{...styles.input, backgroundColor: current.input, color: current.text}} value={formData.fluidType} onChange={e => setFormData({...formData, fluidType: e.target.value})} />
+              </div>
+            )}
+
+            <button style={{...styles.saveBtn, backgroundColor: current.accent}} onClick={saveWell}>
+              <Save size={18} /> CONFIRM DRILLING
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 const styles = {
-  container: { height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#1a1a1a', color: '#eee', fontFamily: 'sans-serif' },
-  header: { padding: '1rem 2rem', background: '#252525', borderBottom: '1px solid #333' },
-  main: { flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' },
-  mapContainer: { flex: 1, position: 'relative', backgroundColor: '#0f0f0f', cursor: 'crosshair', overflow: 'hidden' },
-  grid: { position: 'absolute', width: '2000px', height: '2000px', backgroundImage: 'linear-gradient(#222 1px, transparent 1px), linear-gradient(90deg, #222 1px, transparent 1px)', backgroundSize: '40px 40px' },
-  wellMarker: { position: 'absolute', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' },
-  wellLabel: { fontSize: '10px', marginTop: '4px', color: '#888' },
-  sidebar: { width: '350px', backgroundColor: '#252525', borderLeft: '1px solid #333', padding: '1.5rem', overflowY: 'auto' },
-  sidebarHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' },
-  form: { display: 'flex', flexDirection: 'column', gap: '10px' },
+  container: { height: '100vh', width: '100vw', overflow: 'hidden', display: 'flex', flexDirection: 'column', fontFamily: '"Monaco", "Consolas", monospace', transition: 'all 0.4s' },
+  floatHeader: { position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 100, padding: '10px 25px', borderRadius: '15px', display: 'flex', alignItems: 'center', gap: '30px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' },
+  title: { margin: 0, fontSize: '14px', letterSpacing: '3px', fontWeight: '400' },
+  themeBtn: { border: 'none', width: '36px', height: '36px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' },
+  mapCenterer: { flex: 1, padding: '10px', display: 'flex' },
+  mapCanvas: { flex: 1, borderRadius: '20px', position: 'relative', overflow: 'hidden', cursor: 'crosshair', border: '1px solid rgba(0,0,0,0.1)' },
+  isolinesSvg: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
+  wellMarker: { position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', transform: 'translate(-50%, -100%)', cursor: 'pointer', zIndex: 5 },
+  markerPoint: { width: '24px', height: '24px', borderRadius: '6px 6px 6px 0', transform: 'rotate(-45deg)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' },
+  markerLabel: { transform: 'rotate(0deg)', fontSize: '9px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', marginTop: '8px', textTransform: 'uppercase' },
+  mapHint: { position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', fontSize: '10px', fontWeight: 'bold', letterSpacing: '2px', opacity: 0.4 },
+  sidePanel: { position: 'fixed', right: '30px', top: '90px', width: '300px', borderRadius: '20px', padding: '25px', display: 'flex', flexDirection: 'column', zIndex: 100, boxShadow: '0 10px 40px rgba(0,0,0,0.4)' },
+  panelHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
+  scrollArea: { display: 'flex', flexDirection: 'column', gap: '12px' },
+  label: { fontSize: '9px', fontWeight: '800', opacity: 0.5, letterSpacing: '1px' },
+  input: { border: 'none', padding: '10px 12px', borderRadius: '8px', fontSize: '13px', outline: 'none' },
   row: { display: 'flex', gap: '10px' },
-  saveBtn: { marginTop: '1rem', padding: '12px', backgroundColor: '#0066ff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' },
-  hint: { position: 'absolute', bottom: '20px', left: '20px', color: '#555', pointerEvents: 'none' }
+  typeSection: { display: 'flex', flexDirection: 'column', gap: '10px', padding: '10px 0' },
+  saveBtn: { border: 'none', color: '#fff', padding: '14px', borderRadius: '10px', fontWeight: '800', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '5px' }
 };
 
 export default App;
