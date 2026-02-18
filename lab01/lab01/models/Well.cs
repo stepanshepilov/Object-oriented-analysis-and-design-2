@@ -32,4 +32,8 @@ public class Well
         this.FieldName = fieldName;
         this.FlowRate = flowRate;
     }
+
+    public Well Clone() {
+
+    }
 }
