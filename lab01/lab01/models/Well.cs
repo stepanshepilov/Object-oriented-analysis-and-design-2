@@ -3,10 +3,14 @@ namespace lab01.Models;
 
 [JsonDerivedType(typeof(ProductionWell), "prod")]
 [JsonDerivedType(typeof(InjectionWell), "inj")]
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 
 public abstract class BaseWell
 {
     public Guid Id { get; set; }
+
+    [JsonIgnore]
+    public string Type { get; set; } = string.Empty;
     public double X { get; set; }
     public double Y { get; set; }
     public double Z { get; set; }
@@ -16,14 +20,17 @@ public abstract class BaseWell
 
     public BaseWell() { }
 
-    public BaseWell(double x, double y, double z, double pressure, string fieldName)
+    protected BaseWell(BaseWell source)
     {
-        Id = Guid.NewGuid();
-        X = x; Y = y; Z = z;
-        Pressure = pressure;
-        FieldName = fieldName;
-        CreatedAt = DateTime.Now;
+        this.Id = Guid.NewGuid();
+        this.Z = source.Z;
+        this.Pressure = source.Pressure;
+        this.FieldName = source.FieldName + " (Clone)";
+        this.Type = source.Type;
+        this.CreatedAt = DateTime.Now;
     }
+
+    public abstract BaseWell Clone();
 }
 
 public class ProductionWell : BaseWell
@@ -31,13 +38,17 @@ public class ProductionWell : BaseWell
     public double OilQuality { get; set; }
     public double GasCut { get; set; }
 
-    public ProductionWell() { }
-    
-    public ProductionWell(double x, double y, double z, double pressure, string fieldName, double oilQuality, double gasCut) 
-        : base(x, y, z, pressure, fieldName)
+    public ProductionWell() { Type = "prod"; }
+
+    public ProductionWell(ProductionWell source) : base(source)
     {
-        OilQuality = oilQuality;
-        GasCut = gasCut;
+        this.OilQuality = source.OilQuality;
+        this.GasCut = source.GasCut;
+    }
+
+    public override BaseWell Clone()
+    {
+        return new ProductionWell(this);
     }
 }
 
@@ -46,16 +57,16 @@ public class InjectionWell : BaseWell
     public double InjectionRate { get; set; }
     public string FluidType { get; set; } = "Water";
 
-    public InjectionWell() { }
+    public InjectionWell() { Type = "inj"; }
 
-    public InjectionWell(double x, double y, double z, double pressure, string fieldName, double injectionRate, string fluidType) 
-        : base(x, y, z, pressure, fieldName)
+    public InjectionWell(InjectionWell source) : base(source)
     {
-        InjectionRate = injectionRate;
-        FluidType = fluidType;
+        this.InjectionRate = source.InjectionRate;
+        this.FluidType = source.FluidType;
     }
 
-    public Well Clone() {
-
+    public override BaseWell Clone()
+    {
+        return new InjectionWell(this);
     }
 }

@@ -1,7 +1,10 @@
 ﻿using lab01.Models;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddCors(opt => opt.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+
+builder.Services.AddCors(opt => opt.AddDefaultPolicy(p => 
+    p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+
 var app = builder.Build();
 app.UseCors();
 
@@ -9,20 +12,27 @@ var wells = new List<BaseWell>();
 
 app.MapGet("/api/wells", () => wells);
 
-app.MapPost("/api/wells", (WellRequest req) => {
-    BaseWell newWell;
-
-    if (req.Type == "prod") {
-        newWell = new ProductionWell(req.X, req.Y, req.Z, req.Pressure, req.FieldName, req.OilQuality, req.GasCut);
-    } else {
-        newWell = new InjectionWell(req.X, req.Y, req.Z, req.Pressure, req.FieldName, req.InjectionRate, req.FluidType);
-    }
-
+app.MapPost("/api/wells", (BaseWell newWell) => {
+    newWell.Id = Guid.NewGuid();
+    newWell.CreatedAt = DateTime.Now;
+    
     wells.Add(newWell);
     return Results.Created($"/api/wells/{newWell.Id}", newWell);
 });
 
+app.MapPost("/api/wells/{id}/clone", (Guid id, CloneRequest req) => {
+    var original = wells.FirstOrDefault(w => w.Id == id);
+    if (original == null) return Results.NotFound();
+
+    var clonedWell = original.Clone();
+    
+    clonedWell.X = req.X;
+    clonedWell.Y = req.Y;
+    
+    wells.Add(clonedWell);
+    return Results.Created($"/api/wells/{clonedWell.Id}", clonedWell);
+});
+
 app.Run();
 
-public record WellRequest(string Type, double X, double Y, double Z, double Pressure, string FieldName, 
-                          double OilQuality, double GasCut, double InjectionRate, string FluidType);
+public record CloneRequest(double X, double Y);
