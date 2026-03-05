@@ -1,0 +1,3 @@
+/Users/sepilovstepansergeevic/Desktop/Другое/ВУЗ/ood/Object-oriented-analysis-and-design-2/lab02/build/CMakeFiles/DeepSeekProxy.dir
+/Users/sepilovstepansergeevic/Desktop/Другое/ВУЗ/ood/Object-oriented-analysis-and-design-2/lab02/build/CMakeFiles/edit_cache.dir
+/Users/sepilovstepansergeevic/Desktop/Другое/ВУЗ/ood/Object-oriented-analysis-and-design-2/lab02/build/CMakeFiles/rebuild_cache.dir
