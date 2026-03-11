@@ -53,32 +53,6 @@ public:
     }
 };
 
-// Proxy для LLM сервиса, позволяет обращаться к нему, как и к обычному сервису
-class DeepSeekProxy : public ILLMService {
-private:
-    DeepSeekService* realService;
-    std::map<std::string, std::string> cache;
-public:
-    bool lastFromCache = false;
-
-    DeepSeekProxy(DeepSeekService* s) : realService(s) {}
-
-    std::string ask(std::string prompt) override {
-        if (cache.count(prompt)) {
-            lastFromCache = true;
-            return cache[prompt];
-        }
-        lastFromCache = false;
-        std::string res = realService->ask(prompt);
-        if (res.find("Error") == std::string::npos) {
-            cache[prompt] = res;
-        }
-        return res;
-    }
-
-    void clearCache() { cache.clear(); }
-};
-
 // GUI
 void SetupModernStyle() {
     ImGuiStyle& style = ImGui::GetStyle();
@@ -96,7 +70,6 @@ void SetupModernStyle() {
 int main() {
     // Инициализация сервиса и прокси
     auto* real = new DeepSeekService("sk-83b8a79074014235a99ab723cb6e0103");
-    auto* proxy = new DeepSeekProxy(real);
 
     if (!glfwInit()) return 1;
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -155,10 +128,8 @@ int main() {
         if (ImGui::Button("Отправить", ImVec2(120, 35)) && !isLoading) {
             std::string p(inputBuf);
             isLoading = true;
-            futureResult = std::async(std::launch::async, [proxy, p]() { return proxy->ask(p); });
+            futureResult = std::async(std::launch::async, [real, p]() { return real->ask(p); });
         }
-        ImGui::SameLine();
-        if (ImGui::Button("Очистить кэш", ImVec2(120, 35))) { proxy->clearCache(); }
         ImGui::SameLine();
         if (ImGui::Button("Тест RU", ImVec2(100, 35))) { output = "Проверка кириллицы: Привет!"; }
 
@@ -170,12 +141,6 @@ int main() {
                 isLoading = false;
             }
             ImGui::TextColored(ImVec4(1, 1, 0, 1), "Нейросеть думает...");
-        } 
-        else {
-            if (proxy->lastFromCache) 
-                ImGui::TextColored(ImVec4(0.2f, 0.9f, 0.2f, 1.0f), "Статус: Взято из КЭША (Proxy)");
-            else 
-                ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Статус: Запрос через СЕТЬ (Real Subject)");
         }
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.15f, 0.17f, 1.00f));
