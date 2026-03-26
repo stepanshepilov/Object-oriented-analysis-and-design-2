@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Student State</title>
+    <style>
+        body { font-family: monospace; text-align: center; transition: 0.5s; padding-top: 50px; }
+        .night { background: #222; color: #fff; }
+        .day { background: #fff; color: #222; }
+        .stat-box { font-size: 24px; margin: 20px; border: 1px solid; padding: 10px; display: inline-block; }
+        button { padding: 10px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body class="day">
+    <h1 id="clock">00:00</h1>
+    <h2 id="state-display">State: ...</h2>
+    
+    <div class="stat-box">IQ: <span id="iq-val">0</span></div>
+    <div class="stat-box">MMR: <span id="mmr-val">0</span></div>
+
+    <div id="visual" style="font-size: 100px;">📖</div>
+
+    <div>
+        <button onclick="doAction('lock')">LOCK (Sleep)</button>
+        <button onclick="doAction('play')">PLAY (Mode)</button>
+        <button onclick="doAction('next')">NEXT (Action)</button>
+        <button onclick="doAction('prev')">PREV</button>
+    </div>
+
+    <p id="log" style="color: gray;"></p>
+
+    <script>
+        let lastClick = 0;
+
+        async function refresh() {
+            const r = await fetch('/status');
+            const d = await r.json();
+            
+            // ОБНОВЛЕНИЕ ЗНАЧЕНИЙ НА ЭКРАНЕ
+            document.getElementById('clock').innerText = d.hour;
+            document.getElementById('iq-val').innerText = d.iq;
+            document.getElementById('mmr-val').innerText = d.mmr;
+            document.getElementById('state-display').innerText = "State: " + d.state;
+
+            document.body.className = d.is_day ? 'day' : 'night';
+            
+            const v = document.getElementById('visual');
+            if (d.state === "SleepingState") v.innerText = "😴";
+            else if (d.state === "StudyingState") v.innerText = "📖";
+            else v.innerText = "🎮";
+        }
+
+        async function doAction(m) {
+            const now = Date.now();
+            const dbl = (now - lastClick < 300);
+            lastClick = now;
+
+            const r = await fetch(`/action/${m}?dbl=${dbl}`, {method: 'POST'});
+            const data = await r.json();
+            document.getElementById('log').innerText = data.message;
+            
+            // После каждого клика принудительно обновляем данные
+            await refresh();
+        }
+
+        // Авто-обновление времени и статов каждые 500мс
+        setInterval(refresh, 500);
+        refresh();
+    </script>
+</body>
+</html>
