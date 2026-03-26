@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "/Users/sepilovstepansergeevic/Desktop/Другое/ВУЗ/ood/Object-oriented-analysis-and-design-2/lab02"
+    "cmake.sourceDirectory": "/Users/sepilovstepansergeevic/Desktop/Другое/ВУЗ/ood/Object-oriented-analysis-and-design-2/lab02",
+    "python-envs.defaultEnvManager": "ms-python.python:venv"
 }
