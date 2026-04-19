@@ -1,71 +1,503 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>Student State</title>
-    <style>
-        body { font-family: monospace; text-align: center; transition: 0.5s; padding-top: 50px; }
-        .night { background: #222; color: #fff; }
-        .day { background: #fff; color: #222; }
-        .stat-box { font-size: 24px; margin: 20px; border: 1px solid; padding: 10px; display: inline-block; }
-        button { padding: 10px; margin: 5px; cursor: pointer; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>8-BIT STUDENT · STATE MACHINE</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #1a1e2c;
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      transition: background-color 0.2s step-end;
+      background-image: 
+        linear-gradient(rgba(0, 0, 0, 0.2) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.2) 1px, transparent 1px);
+      background-size: 8px 8px;
+    }
+
+    body.state-sleeping { background-color: #0d1b2a; }
+    body.state-studying { background-color: #2d3e2c; }
+    body.state-gaming { background-color: #3b1e2b; }
+
+    body.day { filter: brightness(1.2) saturate(1.1); }
+    body.night { filter: brightness(0.9) saturate(1); }
+
+    .gameboy {
+      max-width: 750px;
+      width: 100%;
+      background: #8bac0f;
+      padding: 20px 20px 30px;
+      border-radius: 12px 12px 24px 12px;
+      box-shadow: 
+        0 0 0 4px #306230,
+        0 0 0 8px #0f380f,
+        12px 12px 0 0 rgba(0,0,0,0.3);
+      border: 2px solid #9bbc0f;
+    }
+
+    .screen {
+      background: #c4dca0;
+      padding: 20px 16px 16px;
+      border-radius: 8px 8px 12px 8px;
+      box-shadow: 
+        inset 0 0 0 3px #2c3e1c,
+        inset 0 0 15px #1f3a1f,
+        0 0 0 4px #306230;
+      border: 2px solid #1f3a1f;
+      margin-bottom: 24px;
+    }
+
+    .pixel-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: #0a2f0a;
+      text-shadow: 2px 2px 0 #b0d48b;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      padding: 0 6px;
+    }
+
+    #clock {
+      background: #0a1f0a;
+      color: #a0e040;
+      padding: 8px 12px;
+      border-radius: 0;
+      box-shadow: inset 0 0 0 2px #1f3a1f, 3px 3px 0 #0f2b0f;
+      font-size: 16px;
+      text-shadow: 0 0 5px #7cfc00;
+    }
+
+    .stats-panel {
+      display: flex;
+      justify-content: space-around;
+      margin: 16px 0 12px;
+    }
+
+    .stat-pixel {
+      background: #1e3a1e;
+      color: #b0fc7a;
+      padding: 10px 14px;
+      box-shadow: inset 0 0 0 2px #2d5a2d, 3px 3px 0 #0c1e0c;
+      font-size: 12px;
+      text-align: center;
+      border: 1px solid #60b060;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      margin-top: 6px;
+      color: #f8ffd0;
+      text-shadow: 3px 3px 0 #1e4a1e;
+    }
+
+    /* Область спрайта */
+    .sprite-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 10px 0 5px;
+    }
+
+    canvas#pixel-student {
+      width: 160px;
+      height: 160px;
+      background: #b0d48b;
+      box-shadow: inset 0 0 0 3px #4a6b2a, 6px 6px 0 #1a2e1a;
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
+      border: 2px solid #2c5e2c;
+    }
+
+    #state-display {
+      font-size: 14px;
+      background: #1f3a1f;
+      color: #c0ff90;
+      padding: 6px 10px;
+      display: inline-block;
+      box-shadow: inset 0 0 0 2px #2c5a2c, 3px 3px 0 #0f230f;
+      margin: 10px 0;
+    }
+
+    .button-panel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    .pixel-btn {
+      background: linear-gradient(145deg, #f0c060, #b0882c);
+      border: none;
+      border-bottom: 6px solid #6a4e1a;
+      border-right: 4px solid #6a4e1a;
+      box-shadow: 3px 3px 0 #4a3a1a, inset -2px -2px 0 #ffe0a0, inset 2px 2px 0 #ffeca0;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      padding: 12px 16px;
+      color: #0a1a0a;
+      text-shadow: 1px 1px 0 #ffeeaa;
+      cursor: pointer;
+      transition: all 0.05s step-end;
+      letter-spacing: 1px;
+      flex: 0 1 auto;
+      min-width: 105px;
+    }
+
+    .pixel-btn:active {
+      transform: translate(3px, 3px);
+      box-shadow: 1px 1px 0 #4a3a1a, inset -1px -1px 0 #ffe0a0, inset 1px 1px 0 #ffeca0;
+      border-bottom-width: 3px;
+      border-right-width: 2px;
+    }
+
+    .log-area {
+      margin-top: 20px;
+      background: #1f3a1f;
+      padding: 12px 16px;
+      color: #bcf08c;
+      box-shadow: inset 0 0 0 3px #0f2b0f, 4px 4px 0 #0e1e0e;
+      font-size: 11px;
+      line-height: 1.6;
+      min-height: 50px;
+      word-break: break-word;
+      border: 1px solid #5f9f5f;
+    }
+
+    @media (max-width: 500px) {
+      .gameboy { padding: 12px; }
+      .pixel-btn { font-size: 9px; padding: 10px 6px; min-width: 80px; }
+    }
+
+    ::-webkit-scrollbar { width: 10px; background: #2c4a2c; }
+    ::-webkit-scrollbar-thumb { background: #7cb87c; border: 2px solid #1f3a1f; }
+  </style>
 </head>
-<body class="day">
-    <h1 id="clock">00:00</h1>
-    <h2 id="state-display">State: ...</h2>
-    
-    <div class="stat-box">IQ: <span id="iq-val">0</span></div>
-    <div class="stat-box">MMR: <span id="mmr-val">0</span></div>
-
-    <div id="visual" style="font-size: 100px;">📖</div>
-
-    <div>
-        <button onclick="doAction('lock')">LOCK (Sleep)</button>
-        <button onclick="doAction('play')">PLAY (Mode)</button>
-        <button onclick="doAction('next')">NEXT (Action)</button>
-        <button onclick="doAction('prev')">PREV</button>
+<body id="main-body" class="day state-studying">
+<div class="gameboy">
+  <div class="screen">
+    <div class="pixel-header">
+      <span>⚡ LV.99 ⚡</span>
+      <span id="clock">--:--</span>
     </div>
 
-    <p id="log" style="color: gray;"></p>
+    <div style="text-align: center;">
+      <span id="state-display">STATE: ...</span>
+    </div>
 
-    <script>
-        let lastClick = 0;
+    <!-- Пиксельный спрайт студента на canvas -->
+    <div class="sprite-container">
+      <canvas id="pixel-student" width="32" height="32"></canvas>
+      <div style="font-size: 10px; color: #1e4a1e; margin-top: 4px;">[ STUDENT.EXE ]</div>
+    </div>
 
-        async function refresh() {
-            const r = await fetch('/status');
-            const d = await r.json();
-            
-            // ОБНОВЛЕНИЕ ЗНАЧЕНИЙ НА ЭКРАНЕ
-            document.getElementById('clock').innerText = d.hour;
-            document.getElementById('iq-val').innerText = d.iq;
-            document.getElementById('mmr-val').innerText = d.mmr;
-            document.getElementById('state-display').innerText = "State: " + d.state;
+    <div class="stats-panel">
+      <div class="stat-pixel">
+        📚 IQ<br>
+        <span class="stat-value" id="iq-val">0</span>
+      </div>
+      <div class="stat-pixel">
+        🎮 MMR<br>
+        <span class="stat-value" id="mmr-val">0</span>
+      </div>
+    </div>
 
-            document.body.className = d.is_day ? 'day' : 'night';
-            
-            const v = document.getElementById('visual');
-            if (d.state === "SleepingState") v.innerText = "😴";
-            else if (d.state === "StudyingState") v.innerText = "📖";
-            else v.innerText = "🎮";
+    <div class="button-panel">
+      <button class="pixel-btn" onclick="doAction('lock')">🔒 LOCK</button>
+      <button class="pixel-btn" onclick="doAction('play')">▶ PLAY</button>
+      <button class="pixel-btn" onclick="doAction('next')">⏩ NEXT</button>
+      <button class="pixel-btn" onclick="doAction('prev')">⏪ PREV</button>
+    </div>
+
+    <div class="log-area" id="log">... нажми кнопку ...</div>
+  </div>
+  <div style="display: flex; justify-content: space-between; margin-top: 10px; padding: 0 10px;">
+    <span style="color: #2c5e2c; font-size: 10px;">◀ ▶</span>
+    <span style="color: #0f380f; font-size: 10px;">STATE PATTERN</span>
+    <span style="color: #2c5e2c; font-size: 10px;">A B</span>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // ---------- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ----------
+    let lastClick = 0;
+    const canvas = document.getElementById('pixel-student');
+    const ctx = canvas.getContext('2d');
+    // Размер спрайта в пикселях (canvas 32x32)
+    const SPRITE_SIZE = 32;
+    canvas.width = SPRITE_SIZE;
+    canvas.height = SPRITE_SIZE;
+
+    // ---------- ФУНКЦИИ РИСОВАНИЯ ПИКСЕЛЬ-АРТА ----------
+    function drawPixel(x, y, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, 1, 1);
+    }
+
+    // Цветовая палитра
+    const PALETTE = {
+      skin: '#F7D6A6',
+      skinDark: '#D4A373',
+      hair: '#5D4037',
+      eye: '#1A1A1A',
+      white: '#F0F0E0',
+      book1: '#3A5F8F',
+      book2: '#F4D03F',
+      zColor: '#A8D0E6',
+      pillow: '#8D6E63',
+      controller: '#8C2E2E',
+      screen: '#2C3E50',
+      headphones: '#1E1E2F',
+      desk: '#6D4C41',
+      chair: '#4E342E'
+    };
+
+    // Рисуем спящего студента
+    function drawSleeping() {
+      ctx.clearRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+      // Подушка / кровать
+      for (let y = 24; y < 30; y++) {
+        for (let x = 6; x < 26; x++) {
+          drawPixel(x, y, PALETTE.pillow);
         }
-
-        async function doAction(m) {
-            const now = Date.now();
-            const dbl = (now - lastClick < 300);
-            lastClick = now;
-
-            const r = await fetch(`/action/${m}?dbl=${dbl}`, {method: 'POST'});
-            const data = await r.json();
-            document.getElementById('log').innerText = data.message;
-            
-            // После каждого клика принудительно обновляем данные
-            await refresh();
+      }
+      // Тело (спит на боку)
+      // Голова
+      drawPixel(12, 20, PALETTE.skin);
+      drawPixel(13, 20, PALETTE.skin);
+      drawPixel(14, 20, PALETTE.skin);
+      drawPixel(11, 21, PALETTE.skin);
+      drawPixel(12, 21, PALETTE.skin);
+      drawPixel(13, 21, PALETTE.skinDark);
+      drawPixel(10, 22, PALETTE.skin);
+      drawPixel(11, 22, PALETTE.skin);
+      drawPixel(12, 22, PALETTE.skinDark);
+      // Волосы
+      drawPixel(12, 19, PALETTE.hair);
+      drawPixel(13, 19, PALETTE.hair);
+      drawPixel(14, 19, PALETTE.hair);
+      // Глаза закрыты
+      drawPixel(11, 21, PALETTE.eye);
+      drawPixel(13, 21, PALETTE.eye);
+      // Рот
+      drawPixel(12, 23, '#8B5E3C');
+      // Одеяло
+      for (let y = 23; y < 28; y++) {
+        for (let x = 14; x < 22; x++) {
+          drawPixel(x, y, '#4A6FA5');
         }
+      }
+      // Zzz
+      drawPixel(20, 14, PALETTE.zColor);
+      drawPixel(21, 14, PALETTE.zColor);
+      drawPixel(22, 14, PALETTE.zColor);
+      drawPixel(23, 13, PALETTE.zColor);
+      drawPixel(24, 12, PALETTE.zColor);
+      drawPixel(24, 11, PALETTE.zColor);
+      drawPixel(25, 10, PALETTE.zColor);
+    }
 
-        // Авто-обновление времени и статов каждые 500мс
-        setInterval(refresh, 500);
-        refresh();
-    </script>
+    // Рисуем учащегося студента
+    function drawStudying() {
+      ctx.clearRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+      // Стол
+      for (let y = 26; y < 32; y++) {
+        for (let x = 6; x < 26; x++) {
+          drawPixel(x, y, PALETTE.desk);
+        }
+      }
+      // Стул
+      for (let y = 27; y < 32; y++) {
+        for (let x = 2; x < 8; x++) {
+          drawPixel(x, y, PALETTE.chair);
+        }
+      }
+      // Тело студента
+      // Голова
+      drawPixel(12, 16, PALETTE.skin);
+      drawPixel(13, 16, PALETTE.skin);
+      drawPixel(14, 16, PALETTE.skin);
+      drawPixel(11, 17, PALETTE.skin);
+      drawPixel(12, 17, PALETTE.skinDark);
+      drawPixel(13, 17, PALETTE.skin);
+      drawPixel(14, 17, PALETTE.skinDark);
+      drawPixel(12, 18, PALETTE.skin);
+      drawPixel(13, 18, PALETTE.skin);
+      // Волосы
+      drawPixel(12, 15, PALETTE.hair);
+      drawPixel(13, 15, PALETTE.hair);
+      drawPixel(14, 15, PALETTE.hair);
+      // Очки
+      drawPixel(11, 16, PALETTE.eye);
+      drawPixel(13, 16, PALETTE.eye);
+      drawPixel(12, 17, '#1A1A1A');
+      // Туловище
+      for (let y = 19; y < 25; y++) {
+        for (let x = 11; x < 16; x++) {
+          drawPixel(x, y, '#2E5A88');
+        }
+      }
+      // Книга в руках
+      drawPixel(14, 22, PALETTE.book1);
+      drawPixel(15, 22, PALETTE.book1);
+      drawPixel(16, 22, PALETTE.book1);
+      drawPixel(14, 23, PALETTE.book2);
+      drawPixel(15, 23, PALETTE.book2);
+      drawPixel(16, 23, PALETTE.book2);
+      // Рука
+      drawPixel(17, 22, PALETTE.skin);
+      drawPixel(17, 23, PALETTE.skin);
+      // Вторая рука
+      drawPixel(10, 22, PALETTE.skin);
+      drawPixel(10, 23, PALETTE.skin);
+    }
+
+    // Рисуем играющего студента
+    function drawGaming() {
+      ctx.clearRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+      // Фон (монитор)
+      for (let y = 8; y < 16; y++) {
+        for (let x = 10; x < 22; x++) {
+          drawPixel(x, y, PALETTE.screen);
+        }
+      }
+      // Экран монитора
+      drawPixel(12, 10, '#A0E040');
+      drawPixel(13, 10, '#A0E040');
+      drawPixel(14, 10, '#A0E040');
+      drawPixel(12, 11, '#A0E040');
+      drawPixel(13, 11, '#1A1A1A');
+      drawPixel(14, 11, '#A0E040');
+      drawPixel(12, 12, '#A0E040');
+      drawPixel(13, 12, '#A0E040');
+      drawPixel(14, 12, '#A0E040');
+      
+      // Стол
+      for (let y = 24; y < 32; y++) {
+        for (let x = 4; x < 28; x++) {
+          drawPixel(x, y, PALETTE.desk);
+        }
+      }
+      // Студент
+      // Голова
+      drawPixel(16, 16, PALETTE.skin);
+      drawPixel(17, 16, PALETTE.skin);
+      drawPixel(18, 16, PALETTE.skin);
+      drawPixel(15, 17, PALETTE.skin);
+      drawPixel(16, 17, PALETTE.skinDark);
+      drawPixel(17, 17, PALETTE.skin);
+      drawPixel(18, 17, PALETTE.skinDark);
+      drawPixel(16, 18, PALETTE.skin);
+      drawPixel(17, 18, PALETTE.skin);
+      // Волосы
+      drawPixel(16, 15, PALETTE.hair);
+      drawPixel(17, 15, PALETTE.hair);
+      drawPixel(18, 15, PALETTE.hair);
+      // Наушники
+      drawPixel(15, 16, '#1E1E2F');
+      drawPixel(19, 16, '#1E1E2F');
+      drawPixel(15, 17, '#1E1E2F');
+      drawPixel(19, 17, '#1E1E2F');
+      // Глаза
+      drawPixel(16, 16, PALETTE.white);
+      drawPixel(18, 16, PALETTE.white);
+      drawPixel(16, 16, PALETTE.eye);
+      drawPixel(18, 16, PALETTE.eye);
+      // Туловище
+      for (let y = 19; y < 24; y++) {
+        for (let x = 15; x < 20; x++) {
+          drawPixel(x, y, '#B23B3B');
+        }
+      }
+      // Руки с геймпадом
+      drawPixel(20, 20, PALETTE.skin);
+      drawPixel(21, 20, PALETTE.skin);
+      drawPixel(14, 20, PALETTE.skin);
+      drawPixel(13, 20, PALETTE.skin);
+      // Геймпад
+      drawPixel(16, 22, '#4A4A4A');
+      drawPixel(17, 22, '#4A4A4A');
+      drawPixel(18, 22, '#4A4A4A');
+      drawPixel(16, 23, '#D4AF37');
+      drawPixel(17, 23, '#D4AF37');
+      drawPixel(18, 23, '#D4AF37');
+      // Кнопки геймпада
+      drawPixel(16, 22, '#E74C3C');
+      drawPixel(18, 22, '#2ECC71');
+    }
+
+    // Обновление спрайта по состоянию
+    function updateSprite(stateName) {
+      if (stateName === 'SleepingState') drawSleeping();
+      else if (stateName === 'StudyingState') drawStudying();
+      else if (stateName === 'GamingState') drawGaming();
+      else drawStudying(); // fallback
+    }
+
+    // ---------- ВЗАИМОДЕЙСТВИЕ С API ----------
+    async function refresh() {
+      try {
+        const r = await fetch('/status');
+        const d = await r.json();
+        
+        document.getElementById('clock').innerText = d.hour;
+        document.getElementById('iq-val').innerText = d.iq;
+        document.getElementById('mmr-val').innerText = d.mmr;
+        document.getElementById('state-display').innerText = `STATE: ${d.state.replace('State','')}`;
+
+        const body = document.getElementById('main-body');
+        body.className = ''; 
+        body.classList.add(d.is_day ? 'day' : 'night');
+        if (d.state === 'SleepingState') body.classList.add('state-sleeping');
+        else if (d.state === 'StudyingState') body.classList.add('state-studying');
+        else if (d.state === 'GamingState') body.classList.add('state-gaming');
+        
+        updateSprite(d.state);
+      } catch (e) {
+        console.warn("Refresh error", e);
+      }
+    }
+
+    async function doAction(method) {
+      const now = Date.now();
+      const dbl = (now - lastClick < 300);
+      lastClick = now;
+
+      try {
+        const r = await fetch(`/action/${method}?dbl=${dbl}`, { method: 'POST' });
+        const data = await r.json();
+        document.getElementById('log').innerText = data.message;
+        await refresh();
+      } catch (e) {
+        document.getElementById('log').innerText = 'Ошибка соединения';
+      }
+    }
+
+    // Привязываем функции к window для вызова из onclick
+    window.doAction = doAction;
+    window.refresh = refresh;
+
+    // Инициализация
+    window.onload = () => {
+      refresh();
+      setInterval(refresh, 500);
+    };
+  })();
+</script>
 </body>
 </html>
