@@ -14,7 +14,7 @@ ON CONFLICT (name) DO NOTHING;
 
 
 INSERT INTO products (name, price, stock) 
-VALUES ('Купить Технику Apple онлайн без смс и мас', 100.0, 100) 
+VALUES ('Купить Технику Apple онлайн без смс и регистрации', 100.0, 100) 
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO products (name, price, stock) 
@@ -23,4 +23,8 @@ ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO products (name, price, stock) 
 VALUES ('Партия одобряет', 100000000000.0, 1) 
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO products (name, price, stock) 
+VALUES ('Радмир', 2000000000000000000000000000000, 1) 
 ON CONFLICT (name) DO NOTHING;
